@@ -24,6 +24,7 @@ class CalcephConan(ConanFile):
     }
 
     _autotools= None
+    _nmake_args = None
 
     @property
     def _source_subfolder(self):
@@ -54,16 +55,21 @@ class CalcephConan(ConanFile):
         for patch in self.conan_data.get("patches", {}).get(self.version, []):
             tools.patch(**patch)
         if self.settings.compiler == "Visual Studio":
-            self._build_msvc()
+            with tools.chdir(self._source_subfolder):
+                with tools.vcvars(self.settings):
+                    with tools.environment_append(VisualStudioBuildEnvironment(self).vars):
+                        self.run("nmake -f Makefile.vc {}".format(" ".join(self._get_nmake_args())))
         else:
             autotools = self._configure_autotools()
             autotools.make()
 
-    def _build_msvc(self):
-        with tools.chdir(self._source_subfolder):
-            with tools.vcvars(self.settings):
-                with tools.environment_append(VisualStudioBuildEnvironment(self).vars):
-                    self.run("nmake -f Makefile.vc")
+    def _get_nmake_args(self):
+        if self._nmake_args:
+            return self._nmake_args
+        args = []
+        args.append("DESTDIR=\"{}\"".format(self.package_folder))
+        args.extend(["ENABLEF2003=0", "ENABLEF77=0"])
+        return self._nmake_args
 
     def _configure_autotools(self):
         if self._autotools:
@@ -86,7 +92,9 @@ class CalcephConan(ConanFile):
     def package(self):
         self.copy("COPYING", dst="licenses", src=self._source_subfolder)
         if self.settings.compiler == "Visual Studio":
-            self.run("nmake -f Makefile.vc install")
+            with tools.vcvars(self.settings):
+                with tools.environment_append(VisualStudioBuildEnvironment(self).vars):
+                    self.run("nmake -f Makefile.vc install {}".format(" ".join(self._get_nmake_args())))
         else:
             autotools = self._configure_autotools()
             autotools.install()
