@@ -2,10 +2,11 @@ import glob
 import os
 
 from conans import ConanFile, AutoToolsBuildEnvironment, VisualStudioBuildEnvironment, tools
+from conans.errors import ConanInvalidConfiguration
 
 class CalcephConan(ConanFile):
     name = "calceph"
-    description = "CALCEPH is designed to access the binary planetary ephemeris " \
+    description = "C Library designed to access the binary planetary ephemeris " \
                   "files, such INPOPxx, JPL DExxx and SPICE ephemeris files."
     license = ["CECILL-C", "CECILL-B", "CECILL-2.1"]
     topics = ("conan", "calceph", "ephemeris", "astronomy", "space", "planet")
@@ -41,6 +42,8 @@ class CalcephConan(ConanFile):
         del self.settings.compiler.libcxx
         if self.settings.compiler == "Visual Studio":
             del self.options.threadsafe
+            if self.options.shared:
+                raise ConanInvalidConfiguration("calceph doesn't support shared builds with Visual Studio yet")
 
     def build_requirements(self):
         if self.settings.os == "Windows" and self.settings.compiler != "Visual Studio" and \
@@ -52,8 +55,6 @@ class CalcephConan(ConanFile):
         os.rename(self.name + "-" + self.version, self._source_subfolder)
 
     def build(self):
-        for patch in self.conan_data.get("patches", {}).get(self.version, []):
-            tools.patch(**patch)
         if self.settings.compiler == "Visual Studio":
             with tools.chdir(self._source_subfolder):
                 with tools.vcvars(self.settings):
@@ -66,6 +67,9 @@ class CalcephConan(ConanFile):
     def _get_nmake_args(self):
         if self._nmake_args:
             return self._nmake_args
+        tools.replace_in_file(os.path.join(self._source_subfolder, "Makefile.vc"),
+                              "CFLAGS = /O2 /GR- /MD /nologo /EHs",
+                              "CFLAGS = /nologo /EHs")
         self._nmake_args = []
         self._nmake_args.append("DESTDIR=\"{}\"".format(self.package_folder))
         self._nmake_args.extend(["ENABLEF2003=0", "ENABLEF77=0"])
@@ -96,17 +100,23 @@ class CalcephConan(ConanFile):
                 with tools.vcvars(self.settings):
                     with tools.environment_append(VisualStudioBuildEnvironment(self).vars):
                         self.run("nmake -f Makefile.vc install {}".format(" ".join(self._get_nmake_args())))
+            tools.rmdir(os.path.join(self.package_folder, "doc"))
         else:
             autotools = self._configure_autotools()
             autotools.install()
-            tools.rmdir(os.path.join(self.package_folder, "libexec"))
             tools.rmdir(os.path.join(self.package_folder, "share"))
             for la_file in glob.glob(os.path.join(self.package_folder, "lib", "*.la")):
                 os.remove(la_file)
+        tools.rmdir(os.path.join(self.package_folder, "libexec"))
 
     def package_info(self):
         self.cpp_info.libs = tools.collect_libs(self)
+        if self.settings.os == "Linux":
+            self.cpp_info.system_libs.append("m")
+            if self.options.threadsafe:
+                self.cpp_info.system_libs.append("pthread")
 
-        bin_path = os.path.join(self.package_folder, "bin")
-        self.output.info("Appending PATH environment variable: {}".format(bin_path))
-        self.env_info.PATH.append(bin_path)
+        if self.settings.compiler != "Visual Studio":
+            bin_path = os.path.join(self.package_folder, "bin")
+            self.output.info("Appending PATH environment variable: {}".format(bin_path))
+            self.env_info.PATH.append(bin_path)
