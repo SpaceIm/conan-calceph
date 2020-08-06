@@ -66,9 +66,9 @@ class CalcephConan(ConanFile):
     def _get_nmake_args(self):
         if self._nmake_args:
             return self._nmake_args
-        args = []
-        args.append("DESTDIR=\"{}\"".format(self.package_folder))
-        args.extend(["ENABLEF2003=0", "ENABLEF77=0"])
+        self._nmake_args = []
+        self._nmake_args.append("DESTDIR=\"{}\"".format(self.package_folder))
+        self._nmake_args.extend(["ENABLEF2003=0", "ENABLEF77=0"])
         return self._nmake_args
 
     def _configure_autotools(self):
