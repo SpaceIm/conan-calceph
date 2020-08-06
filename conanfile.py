@@ -56,6 +56,9 @@ class CalcephConan(ConanFile):
 
     def build(self):
         if self.settings.compiler == "Visual Studio":
+            tools.replace_in_file(os.path.join(self._source_subfolder, "Makefile.vc"),
+                                  "CFLAGS = /O2 /GR- /MD /nologo /EHs",
+                                  "CFLAGS = /nologo /EHs")
             with tools.chdir(self._source_subfolder):
                 with tools.vcvars(self.settings):
                     with tools.environment_append(VisualStudioBuildEnvironment(self).vars):
@@ -67,9 +70,6 @@ class CalcephConan(ConanFile):
     def _get_nmake_args(self):
         if self._nmake_args:
             return self._nmake_args
-        tools.replace_in_file(os.path.join(self._source_subfolder, "Makefile.vc"),
-                              "CFLAGS = /O2 /GR- /MD /nologo /EHs",
-                              "CFLAGS = /nologo /EHs")
         self._nmake_args = []
         self._nmake_args.append("DESTDIR=\"{}\"".format(self.package_folder))
         self._nmake_args.extend(["ENABLEF2003=0", "ENABLEF77=0"])
@@ -78,18 +78,17 @@ class CalcephConan(ConanFile):
     def _configure_autotools(self):
         if self._autotools:
             return self._autotools
-        args = []
-        args.append("--disable-static" if self.options.shared else "--enable-static")
-        args.append("--enable-shared" if self.options.shared else "--disable-shared")
-        args.append("--enable-thread" if self.options.threadsafe else "--disable-thread")
-        args.extend([
+        self._autotools = AutoToolsBuildEnvironment(self, win_bash=tools.os_info.is_windows)
+        args = [
+            "--disable-static" if self.options.shared else "--enable-static",
+            "--enable-shared" if self.options.shared else "--disable-shared",
+            "--enable-thread" if self.options.threadsafe else "--disable-thread",
             "--disable-fortran",
             "--disable-python",
             "--disable-python-package-system",
             "--disable-python-package-user",
             "--disable-mex-octave"
-        ])
-        self._autotools = AutoToolsBuildEnvironment(self, win_bash=tools.os_info.is_windows)
+        ]
         self._autotools.configure(args=args, configure_dir=self._source_subfolder)
         return self._autotools
 
