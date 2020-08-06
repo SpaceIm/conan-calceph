@@ -90,7 +90,7 @@ class CalcephConan(ConanFile):
         return self._autotools
 
     def package(self):
-        self.copy("COPYING", dst="licenses", src=self._source_subfolder)
+        self.copy(pattern="COPYING*", dst="licenses", src=self._source_subfolder)
         if self.settings.compiler == "Visual Studio":
             with tools.vcvars(self.settings):
                 with tools.environment_append(VisualStudioBuildEnvironment(self).vars):
