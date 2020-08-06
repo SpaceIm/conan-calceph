@@ -8,7 +8,7 @@ class CalcephConan(ConanFile):
     description = "CALCEPH is designed to access the binary planetary ephemeris " \
                   "files, such INPOPxx, JPL DExxx and SPICE ephemeris files."
     license = ["CECILL-C", "CECILL-B", "CECILL-2.1"]
-    topics = ("conan", "calceph", "ephemeris", "astronomy")
+    topics = ("conan", "calceph", "ephemeris", "astronomy", "space", "planet")
     homepage = "https://www.imcce.fr/inpop/calceph"
     url = "https://github.com/conan-io/conan-center-index"
     settings = "os", "arch", "compiler", "build_type"
