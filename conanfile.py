@@ -92,9 +92,10 @@ class CalcephConan(ConanFile):
     def package(self):
         self.copy(pattern="COPYING*", dst="licenses", src=self._source_subfolder)
         if self.settings.compiler == "Visual Studio":
-            with tools.vcvars(self.settings):
-                with tools.environment_append(VisualStudioBuildEnvironment(self).vars):
-                    self.run("nmake -f Makefile.vc install {}".format(" ".join(self._get_nmake_args())))
+            with tools.chdir(self._source_subfolder):
+                with tools.vcvars(self.settings):
+                    with tools.environment_append(VisualStudioBuildEnvironment(self).vars):
+                        self.run("nmake -f Makefile.vc install {}".format(" ".join(self._get_nmake_args())))
         else:
             autotools = self._configure_autotools()
             autotools.install()
