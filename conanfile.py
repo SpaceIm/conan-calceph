@@ -113,7 +113,8 @@ class CalcephConan(ConanFile):
         tools.rmdir(os.path.join(self.package_folder, "libexec"))
 
     def package_info(self):
-        self.cpp_info.libs = tools.collect_libs(self)
+        prefix = "lib" if self.settings.compiler == "Visual Studio" else ""
+        self.cpp_info.libs = [prefix + "calceph"]
         if self.settings.os == "Linux":
             self.cpp_info.system_libs.append("m")
             if self.options.threadsafe:
